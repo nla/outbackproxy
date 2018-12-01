@@ -1,4 +1,4 @@
-package org.netpreserve.outbackproxy;
+                package org.netpreserve.outbackproxy;
 
 import org.jwat.common.ByteCountingPushBackInputStream;
 import org.jwat.gzip.GzipReader;

@@ -29,7 +29,7 @@ public class OutbackProxy {
     private static final HttpString ACCEPT_DATETIME = new HttpString("Accept-Datetime");
     private static final HttpString MEMENTO_DATETIME = new HttpString("Memento-Datetime");
     private static final Set<HttpString> HEADERS_TO_RENAME = new HashSet<>(Arrays.asList(
-            TRANSFER_ENCODING, DATE, CONNECTION, SERVER
+            TRANSFER_ENCODING, DATE, CONNECTION, SERVER, CONTENT_LENGTH
     ));
 
     private final CaptureIndex captureIndex;
@@ -117,13 +117,15 @@ public class OutbackProxy {
             if (HEADERS_TO_RENAME.contains(name)) {
                 name = new HttpString("X-Archive-Orig-" + name);
             }
-            headers.putAll(values.getHeaderName(), values);
+            headers.putAll(name, values);
         }
         headers.put(MEMENTO_DATETIME, RFC_1123_DATE_TIME.format(resource.instant().atOffset(UTC)));
         headers.add(VARY, "accept-datetime");
+        headers.put(SERVER, "outbackproxy");
         OutputStream output = exchange.getOutputStream();
         copyStream(resource.payload(), output);
         output.close();
+        exchange.endExchange();
     }
 
     private static void copyStream(InputStream input, OutputStream output) throws IOException {
