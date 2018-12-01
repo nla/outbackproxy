@@ -1,19 +1,19 @@
 package org.netpreserve.outbackproxy;
 
+import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.handlers.ExceptionHandler;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 
 import javax.net.ssl.SSLContext;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -39,7 +39,7 @@ public class OutbackProxy {
     public static void main(String args[]) throws Exception {
         Map<String, String> env = System.getenv();
         String host = env.getOrDefault("HOST", "0.0.0.0");
-        int port = Integer.parseInt(env.getOrDefault("PORT", "8080"));
+        int port = Integer.parseInt(env.getOrDefault("PORT", "3128"));
         String cdxServerUrl = env.getOrDefault("CDX_URL", "http://localhost:9901/myindex");
         String warcServerUrl = env.getOrDefault("WARC_URL", "");
         CaptureIndex captureIndex = new CaptureIndex(cdxServerUrl);
@@ -52,7 +52,9 @@ public class OutbackProxy {
         this.resourceStore = resourceStore;
         SSLContext sslContext = SelfSign.sslContext();
         ByteBufferPool bufferPool = new DefaultByteBufferPool(true, 16 * 1024 - 20, -1, 4);
-        HttpHandler handler = new BlockingHandler(this::handleRequest);
+        HttpHandler handler = this::handleRequest;
+        handler = Handlers.exceptionHandler(handler).addExceptionHandler(Exception.class, this::handleException);
+        handler = new BlockingHandler(handler);
         handler = new SSLConnectHandler(handler, handler, sslContext, bufferPool);
         webServer = Undertow.builder()
                 .addHttpListener(port, host)
@@ -85,6 +87,15 @@ public class OutbackProxy {
         }
     }
 
+    private void handleException(HttpServerExchange exchange) throws IOException {
+        Exception ex = (Exception) exchange.getAttachment(ExceptionHandler.THROWABLE);
+        exchange.setStatusCode(500);
+        StringWriter sw = new StringWriter();
+        ex.printStackTrace(new PrintWriter(sw));
+        exchange.getRequestHeaders().put(CONTENT_TYPE, "text/plain");
+        exchange.getResponseSender().send(sw.toString());
+    }
+
     /**
      * Parse a Memento style Accept-Datetime request header.
      */
@@ -101,7 +112,7 @@ public class OutbackProxy {
      */
     private void sendResponse(HttpServerExchange exchange, Resource resource) throws IOException {
         HeaderMap headers = exchange.getResponseHeaders();
-        for (HeaderValues values: resource.headers()) {
+        for (HeaderValues values : resource.headers()) {
             HttpString name = values.getHeaderName();
             if (HEADERS_TO_RENAME.contains(name)) {
                 name = new HttpString("X-Archive-Orig-" + name);
