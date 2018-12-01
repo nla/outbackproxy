@@ -1,12 +1,12 @@
 OutbackProxy
 ============
 
-OutbackProxy is a HTTP/S proxy server which replays resources from a web archive rather than fetching them from the
+OutbackProxy is a HTTP/S proxy which replays resources from a web archive rather than fetching them from the
 live web.
 
 It queries a capture index such as [OutbackCDX] or pywb's [CDX Server API]. Once an appropriate
-capture record is located the WARC or ARC it points to is served from the local filesystem or from any remote server
-that supports byte range requests.
+capture is located the WARC or ARC record it points to is served from the local disk or a remote server using
+byte range requests.
 
 When a client makes a HTTPS request the proxy will intercept it and generate a self-signed certificate on the fly.
 Clients may select a particular snapshot using the [Memento] `Accept-Datetime` header.
