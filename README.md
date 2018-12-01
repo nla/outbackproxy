@@ -42,7 +42,7 @@ Building and running
 Install [Maven] and run:
 
     mvn package
-    java -jar target/outbackproxy-0.1.0.jar
+    java -jar target/outbackproxy-0.1.0-jar-with-dependencies.jar
 
 [Maven]: https://maven.apache.org/
 
