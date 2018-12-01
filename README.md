@@ -50,6 +50,7 @@ License
 -------
 
 Copyright 2018 National Library of Australia and contributors
+
 Licensed under the [Apache License, Version 2.0](LICENSE.txt).
 
 Comparison with similar tools
