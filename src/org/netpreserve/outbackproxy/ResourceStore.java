@@ -40,9 +40,9 @@ class ResourceStore {
             return openLocalStream(Paths.get(filename), offset);
         }
         URL url = new URL(urlOrPath);
-        if (url.getAuthority().equalsIgnoreCase("http") || url.getAuthority().equalsIgnoreCase("https")) {
+        if (url.getProtocol().equalsIgnoreCase("http") || url.getProtocol().equalsIgnoreCase("https")) {
             return openRemoteStream(url, offset, length);
-        } else if (url.getAuthority().equalsIgnoreCase("file")) {
+        } else if (url.getProtocol().equalsIgnoreCase("file")) {
             return openLocalStream(Paths.get(url.getPath()), offset);
         } else {
             throw new IllegalArgumentException("unsupported url scheme: " + url.getAuthority());

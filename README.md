@@ -1,7 +1,7 @@
 OutbackProxy
 ============
 
-OutbackProxy is as a HTTP proxy server which replays resources from a web archive rather than fetching them from the
+OutbackProxy is a HTTP/S proxy server which replays resources from a web archive rather than fetching them from the
 live web.
 
 It queries a capture index such as [OutbackCDX] or pywb's [CDX Server API]. Once an appropriate

@@ -21,7 +21,7 @@ class CaptureIndex {
     Capture findClosest(String url, Instant time) throws IOException {
         try {
             StringBuilder sb = new StringBuilder(serverUrl);
-            sb.append("url=");
+            sb.append("?url=");
             sb.append(URLEncoder.encode(url, "UTF-8"));
             if (time != null) {
                 sb.append("&closest=").append(Capture.ARC_TIME.format(time));
