@@ -6,11 +6,14 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.util.Methods;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLContext;
+import javax.net.ssl.*;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 
 /**
  * Handles the HTTP CONNECT method by establishing an SSL session.
@@ -18,13 +21,13 @@ import javax.net.ssl.SSLContext;
 class SSLConnectHandler implements HttpHandler {
     private final HttpHandler handler;
     private final HttpHandler next;
-    private final SSLContext sslContext;
+    private final CertificateGenerator certificateGenerator;
     private final ByteBufferPool byteBufferPool;
 
-    SSLConnectHandler(HttpHandler handler, HttpHandler next, SSLContext sslContext, ByteBufferPool byteBufferPool) {
+    SSLConnectHandler(HttpHandler handler, HttpHandler next, CertificateGenerator certificateGenerator, ByteBufferPool byteBufferPool) {
         this.handler = handler;
         this.next = next;
-        this.sslContext = sslContext;
+        this.certificateGenerator = certificateGenerator;
         this.byteBufferPool = byteBufferPool;
     }
 
@@ -38,9 +41,17 @@ class SSLConnectHandler implements HttpHandler {
     }
 
     private void connected(StreamConnection connection, HttpServerExchange exchange) {
-        UndertowXnioSsl xnioSsl = new UndertowXnioSsl(connection.getWorker().getXnio(), OptionMap.EMPTY, sslContext);
+        UndertowXnioSsl xnioSsl = null;
+        try {
+            xnioSsl = new UndertowXnioSsl(connection.getWorker().getXnio(), OptionMap.EMPTY, certificateGenerator.contextForHost(exchange.getHostName()));
+        } catch (GeneralSecurityException | IOException e) {
+            throw new RuntimeException(e);
+        }
         SslConnection sslConnection = xnioSsl.wrapExistingConnection(connection, OptionMap.EMPTY);
-        UndertowXnioSsl.getSslEngine(sslConnection).setUseClientMode(false);
+        SSLEngine sslEngine = UndertowXnioSsl.getSslEngine(sslConnection);
+        sslEngine.setUseClientMode(false);
+        SSLParameters params = sslEngine.getSSLParameters();
+        sslEngine.setSSLParameters(params);
         HttpOpenListener httpOpenListener = new HttpOpenListener(byteBufferPool, OptionMap.EMPTY);
         httpOpenListener.setRootHandler(handler);
         httpOpenListener.handleEvent(sslConnection);

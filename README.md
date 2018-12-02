@@ -18,21 +18,32 @@ Clients may select a particular snapshot using the [Memento] `Accept-Datetime` h
 Configuration
 -------------
 
-Set following environment variables:
+The following environment variables can be set:
 
     HOST=0.0.0.0                           # address to listen on
     PORT=3128                              # port to listen on
     CDX_URL=http://localhost:9901/myindex  # URL of the CDX server
     WARC_URL=                              # Base URL or path of your WARC files. Leave blank if absolute in CDX
- 
+    CA_CERT=                               # PEM file to read/save CA certificate to
+    CA_KEY=                                # PEM file to read/save CA private key to
+
+CA Certificate
+--------------
+
+In order to support HTTPS requests OutbackProxy needs to sign a certificate for each hostname. On startup it will
+generate a CA certificate used to sign per-host certificates. When the `CA_CERT` and `CA_KEY` environment variables are
+set, the certificate and its private key are persisted in a PEM file.
+
+Uou can load the CA certificate file into a client so it's trusted and you don't get any SSL warning/errrors. For
+example using curl as a client:
+
+    curl --cacert /tmp/ca.crt --proxy localhost:3128 https://example.org/  
+
 Limitations
 -----------
 
 OutbackProxy has no user-interface and is currently only suitable as a backend for automated tooling. You could use
 a Memento browser extension to control it but for browser usage I recommend [pywb] instead.
-
-Currently only self-signed certificates are generated. It doesn't yet support signing with a CA certificate you can
-install in browsers.
 
 Responding to range requests from clients is not yet implemented.
 

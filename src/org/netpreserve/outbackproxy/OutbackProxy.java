@@ -12,8 +12,9 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 
-import javax.net.ssl.SSLContext;
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -42,20 +43,24 @@ public class OutbackProxy {
         int port = Integer.parseInt(env.getOrDefault("PORT", "3128"));
         String cdxServerUrl = env.getOrDefault("CDX_URL", "http://localhost:9901/myindex");
         String warcServerUrl = env.getOrDefault("WARC_URL", "");
+        String caCertFile = env.getOrDefault("CA_CERT", "");
+        String caKeyFile = env.getOrDefault("CA_KEY", "");
         CaptureIndex captureIndex = new CaptureIndex(cdxServerUrl);
         ResourceStore resourceStore = new ResourceStore(warcServerUrl);
-        new OutbackProxy(host, port, captureIndex, resourceStore).run();
+        Path caCertPath = caCertFile.isEmpty() ? null : Paths.get(caCertFile);
+        Path caKeyPath = caKeyFile.isEmpty() ? null : Paths.get(caKeyFile);
+        CertificateGenerator certificateGenerator = new CertificateGenerator(caKeyPath, caCertPath);
+        new OutbackProxy(host, port, captureIndex, resourceStore, certificateGenerator).run();
     }
 
-    public OutbackProxy(String host, int port, CaptureIndex captureIndex, ResourceStore resourceStore) throws Exception {
+    public OutbackProxy(String host, int port, CaptureIndex captureIndex, ResourceStore resourceStore, CertificateGenerator certificateGenerator) throws Exception {
         this.captureIndex = captureIndex;
         this.resourceStore = resourceStore;
-        SSLContext sslContext = SelfSign.sslContext();
         ByteBufferPool bufferPool = new DefaultByteBufferPool(true, 16 * 1024 - 20, -1, 4);
         HttpHandler handler = this::handleRequest;
         handler = Handlers.exceptionHandler(handler).addExceptionHandler(Exception.class, this::handleException);
         handler = new BlockingHandler(handler);
-        handler = new SSLConnectHandler(handler, handler, sslContext, bufferPool);
+        handler = new SSLConnectHandler(handler, handler, certificateGenerator, bufferPool);
         webServer = Undertow.builder()
                 .addHttpListener(port, host)
                 .setByteBufferPool(bufferPool)
@@ -87,6 +92,9 @@ public class OutbackProxy {
         }
     }
 
+    /**
+     * Handle exceptions by sending the stack trace in an error response.
+     */
     private void handleException(HttpServerExchange exchange) throws IOException {
         Exception ex = (Exception) exchange.getAttachment(ExceptionHandler.THROWABLE);
         exchange.setStatusCode(500);
@@ -108,7 +116,7 @@ public class OutbackProxy {
     }
 
     /**
-     * Send a HTTP payload to the client.
+     * Send a resource to the client.
      */
     private void sendResponse(HttpServerExchange exchange, Resource resource) throws IOException {
         HeaderMap headers = exchange.getResponseHeaders();
@@ -126,6 +134,7 @@ public class OutbackProxy {
         copyStream(resource.payload(), output);
         output.close();
         exchange.endExchange();
+
     }
 
     private static void copyStream(InputStream input, OutputStream output) throws IOException {
