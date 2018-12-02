@@ -47,6 +47,9 @@ a Memento browser extension to control it but for browser usage I recommend [pyw
 
 Responding to range requests from clients is not yet implemented.
 
+SSL handling appears to go into an infinite loop under OpenJDK 11. This may be an issue that needs fixing in Undertow.
+For the meantime OpenJDK 8 is recommended.
+
 Building and running
 --------------------
 
