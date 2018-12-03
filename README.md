@@ -9,7 +9,9 @@ capture is located the WARC or ARC record it points to is served from the local 
 byte range requests.
 
 When a client makes a HTTPS request the proxy will intercept it and generate a self-signed certificate on the fly.
-Clients may select a particular snapshot using the [Memento] `Accept-Datetime` header.
+Clients may select a particular snapshot using the [Memento] `Accept-Datetime` header:
+
+    curl -k --proxy localhost:3128 -H 'Accept-Datetime: Thu, 31 May 2007 20:35:00 GMT' https://www.example.org
 
 [OutbackCDX]: https://github.com/nla/outbackcdx
 [CDX Server API]: https://github.com/webrecorder/pywb/wiki/CDX-Server-API
